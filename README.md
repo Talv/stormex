@@ -55,12 +55,12 @@ To download the CascLib submodule, do:
 
 Requires <a href="http://www.cmake.org/">cmake</a> to build:
 
-    $ mkdir build
-    $ cd build
-    $ cmake <path/to/the/source/of/storm-extract>
-    $ make
+```sh
+cmake .
+cmake --build . && make
+```
 
-The executable will be put in build/bin/
+The executable will be put in `bin/storm-extract`
 
 ### NodeJS Module
 
