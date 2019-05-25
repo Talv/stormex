@@ -20,13 +20,13 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <set>
-//#include <regex>
+#include <regex>
 
 using namespace std;
 
 
 // All the global variables
-string version = "1.0.3";
+string version = "1.1.0";
 
 struct tSearchResult {
     string strFileName;
@@ -48,13 +48,18 @@ enum {
     OPT_SEARCH,
     OPT_LOWERCASE,
     OPT_LISTDIRS,
-    OPT_REGEX
+    OPT_REGEX_INCLUDE,
+    OPT_REGEX_EXCLUDE,
+    OPT_REGEX_ICASE
 };
 
 HANDLE hStorage;
 string strSearchPattern = "/";
 string strFilePattern;
-string strFileExt;
+std::vector<string> strFileExts;
+std::vector<regex*> includePatterns;
+std::vector<regex*> excludePatterns;
+bool icasePatterns = false;
 string strSource = "/Applications/Heroes of the Storm";
 string strDestination = ".";
 bool bUseFullPath = true;
@@ -91,8 +96,9 @@ const CSimpleOpt::SOption COMMAND_LINE_OPTIONS[] = {
     { OPT_SEARCH,           "--search",         SO_REQ_SEP },
     // { OPT_LISTDIRS,         "-d",               SO_NONE    },
     // { OPT_LISTDIRS,         "--directories",    SO_NONE    },
-    // { OPT_REGEX,            "-r",               SO_REQ_SEP },
-    // { OPT_REGEX,            "--regex",          SO_REQ_SEP },
+    { OPT_REGEX_ICASE,      "--ignore-case",    SO_NONE    },
+    { OPT_REGEX_INCLUDE,    "--include",        SO_REQ_SEP },
+    { OPT_REGEX_EXCLUDE,    "--exclude",        SO_REQ_SEP },
 
     SO_END_OF_OPTIONS
 };
@@ -115,7 +121,9 @@ void showUsage(const std::string &pathToExecutable) {
          << "    -s, --search <STRING>     Restrict results to full paths matching STRING" << endl
          << "    -f, --filename <STRING>   Search for filenames matching STRING" << endl
          << "    -t, --filetype <STRING>   Search for filenames having extension STRING" << endl
-         // << "    --exclude <ARG1> <ARGN>   Exclude any number of strings" << endl
+         << "    --ignore-case             Case-insensitive pattern" << endl
+         << "    --include <PATTERN>       Include files matching regex PATTERN" << endl
+         << "    --exclude <PATTERN>       Exclude files matching regex PATTERN" << endl
          << endl
          << "  Search:     storm-extract [options]" << endl
          << endl
@@ -148,6 +156,10 @@ void showUsage(const std::string &pathToExecutable) {
          << endl
          << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -s enus -o out -e wav -x" << endl
          << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -s enus -o out -e ogg -x" << endl
+         << endl
+         << "  5) Include and exclude patterns" << endl
+         << endl
+         << "       ./storm-extract -i 'StarCraft II' -v --ignore-case --include '\.SC2Map/' --exclude '(PreloadAssetDB|TextureReductionValues)\.txt$'" << endl
          << endl
          << "Copyright(c) 2016 Justin J. Novack <https://www.github.com/nydus/storm-extract>" << endl;
 }
@@ -191,14 +203,30 @@ void verbose(const int &output) {
 }
 
 // Find out if the end of the string matches another string
-bool hasExtension(const std::string filename, const std::string extension) {
-    // http://stackoverflow.com/questions/874134/find-if-string-ends-with-another-string-in-c
-    return (
-        // Prevent exception of type std::out_of_range: basic_string because the file extension is greater than the filename
-        (filename.length() > extension.length()) &&
+bool hasExtension(const std::string filename, const std::vector<string> extensions) {
+    for (size_t i = 0; i < extensions.size(); i++) {
         // http://stackoverflow.com/questions/874134/find-if-string-ends-with-another-string-in-c
-        (0 == filename.compare(filename.length() - extension.length(), extension.length(), extension))
-    );
+        if (
+            // Prevent exception of type std::out_of_range: basic_string because the file extension is greater than the filename
+            (filename.length() > extensions[i].length()) &&
+            // http://stackoverflow.com/questions/874134/find-if-string-ends-with-another-string-in-c
+            (0 == filename.compare(filename.length() - extensions[i].length(), extensions[i].length(), extensions[i]))
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool searchRegexMulti(const std::string filename, const std::vector<regex*> patterns) {
+    for (size_t i = 0; i < patterns.size(); i++) {
+        if (regex_search(filename, *patterns[i], regex_constants::match_default)) {
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 void printCount( int count, string description ) {
@@ -246,13 +274,20 @@ vector<string> searchArchive() {
                     // No file pattern, No file type
                     (!bPattern && !bFileExt) ||
                     // No file pattern, Yes file type AND file type match.
-                    (!bPattern && bFileExt && hasExtension(r.strFileName, strFileExt)) ||
+                    (!bPattern && bFileExt && hasExtension(r.strFileName, strFileExts)) ||
                     // File name contains search pattern, No file type
                     (bPattern && r.strFileName.find(strFilePattern) != std::string::npos && !bFileExt) ||
                     // File name contains search pattern AND matches file type
                     (bPattern && r.strFileName.find(strFilePattern) != std::string::npos && bFileExt &&
-                        hasExtension(r.strFileName, strFileExt))
-                ){
+                        hasExtension(r.strFileName, strFileExts))
+                ) {
+                    // Apply include/exclude filters
+                    if (
+                        (includePatterns.size() > 0 && !searchRegexMulti(r.strFullPath, includePatterns)) ||
+                        (excludePatterns.size() > 0 && searchRegexMulti(r.strFullPath, excludePatterns))
+                    ) {
+                        continue;
+                    }
                     // if ( bDirectories ) {
                     //     directoryResults.insert(r.strFullPath.substr(0,r.strFullPath.size()-r.strFileName.length()));
                     // } else {
@@ -404,7 +439,7 @@ int main(int argc, char** argv) {
 
                 case OPT_FILEEXT:
                     bFileExt = true;
-                    strFileExt = args.OptionArg();
+                    strFileExts.push_back(args.OptionArg());
                     break;
 
                 case OPT_FULLPATH:
@@ -431,11 +466,28 @@ int main(int argc, char** argv) {
                 //     bDirectories = true;
                 //     break;
 
-                // case OPT_REGEX:
-                //     bSearchPattern = true;
-                //     bRegex = true;
-                //     regex reSearchPattern(args.OptionArg()); //, regex_constants::icase | regex_constants::nosubs );
-                //     break;
+                case OPT_REGEX_ICASE:
+                    icasePatterns = true;
+                    break;
+
+                case OPT_REGEX_INCLUDE:
+                case OPT_REGEX_EXCLUDE:
+                    try {
+                        regex* p = new regex(
+                            args.OptionArg(),
+                            (icasePatterns == true ? regex::ECMAScript | regex::icase : regex::ECMAScript)
+                        );
+                        if (args.OptionId() == OPT_REGEX_INCLUDE) {
+                            includePatterns.push_back(p);
+                        }
+                        else {
+                            excludePatterns.push_back(p);
+                        }
+                    } catch(const std::regex_error& e) {
+                        std::cerr << e.what() << ": " << args.OptionArg() << endl;
+                        return -1;
+                    }
+                    break;
             }
         }
         else
@@ -461,8 +513,8 @@ int main(int argc, char** argv) {
     if (bPattern) {
         verbose("  * filenames matching '" + strFilePattern + "'\n");
     }
-    if (bFileExt) {
-        verbose("  * extensions matching '" + strFileExt + "'\n");
+    for (size_t i = 0; i < strFileExts.size(); i++) {
+        verbose("  * extensions matching '" + strFileExts[i] + "'\n");
     }
     if (bFileExt || bPattern) {
         verbose();
