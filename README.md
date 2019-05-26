@@ -24,8 +24,7 @@ The executable will be put in `build/bin/stormex`
 ## Usage
 
 ```
-stormex v1.2.0
-  Usage: stormex <PATH> [options]
+Usage: stormex <PATH> [options]
 
 This program can list and optionally extract files from a CASC storage container.
 
