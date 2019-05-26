@@ -42,12 +42,8 @@ enum {
     OPT_EXTRACT,
     OPT_SRC,
     OPT_DEST,
-    OPT_FULLPATH,
-    OPT_FILEEXT,
-    OPT_FILEPTRN,
     OPT_SEARCH,
     OPT_LOWERCASE,
-    OPT_LISTDIRS,
     OPT_REGEX_INCLUDE,
     OPT_REGEX_EXCLUDE,
     OPT_REGEX_ICASE
@@ -55,19 +51,12 @@ enum {
 
 HANDLE hStorage;
 string strSearchPattern = "/";
-string strFilePattern;
-std::vector<string> strFileExts;
 std::vector<regex*> includePatterns;
 std::vector<regex*> excludePatterns;
 bool icasePatterns = false;
-string strSource = "/Applications/Heroes of the Storm";
+string strSource;
 string strDestination = ".";
-bool bUseFullPath = true;
-// bool bLowerCase = false;
 bool bExtract = false;
-bool bPattern = false;
-bool bFileExt = false;
-// bool bDirectories = false;
 bool bVerbose = false;      // Print extra information for logging
 bool bQuiet = false;        // Do not print anything.
 
@@ -84,18 +73,10 @@ const CSimpleOpt::SOption COMMAND_LINE_OPTIONS[] = {
     { OPT_SRC,              "--in",             SO_REQ_SEP },
     { OPT_DEST,             "-o",               SO_REQ_SEP },
     { OPT_DEST,             "--out",            SO_REQ_SEP },
-    //{ OPT_FULLPATH,         "-p",               SO_NONE    },
-    //{ OPT_FULLPATH,         "--path",           SO_NONE    },
     //{ OPT_LOWERCASE,        "-c",               SO_NONE    },
     //{ OPT_LOWERCASE,        "--lowercase",      SO_NONE    },
-    { OPT_FILEPTRN,         "-f",               SO_REQ_SEP },
-    { OPT_FILEPTRN,         "--filename",       SO_REQ_SEP },
-    { OPT_FILEEXT,          "-t",               SO_REQ_SEP },
-    { OPT_FILEEXT,          "--filetype",       SO_REQ_SEP },
     { OPT_SEARCH,           "-s",               SO_REQ_SEP },
     { OPT_SEARCH,           "--search",         SO_REQ_SEP },
-    // { OPT_LISTDIRS,         "-d",               SO_NONE    },
-    // { OPT_LISTDIRS,         "--directories",    SO_NONE    },
     { OPT_REGEX_ICASE,      "--ignore-case",    SO_NONE    },
     { OPT_REGEX_INCLUDE,    "--include",        SO_REQ_SEP },
     { OPT_REGEX_EXCLUDE,    "--exclude",        SO_REQ_SEP },
@@ -108,60 +89,25 @@ void showUsage(const std::string &pathToExecutable) {
     cout << "storm-extract v" << version << endl
          << "  Usage: " << pathToExecutable << " [options]" << endl
          << endl
-         << "This program can list and optionally extract files from a Heroes of the Storm CASC storage container." << endl
+         << "This program can list and optionally extract files from a CASC storage container." << endl
          << endl
          << "    -h, --help                Display this help" << endl
          << endl
          << "Options:" << endl
          << "  Common:" << endl
-         << "    -i, --in <PATH>           Directory where '/HeroesData' is" << endl
-         << "                                (default: '/Applications/Heroes of the Storm')" << endl
+         << "    -i, --in <PATH>           Path to game installation folder" << endl
          << "    -v, --verbose             Prints more information" << endl
          << "    -q, --quiet               Prints nothing, nada, zip" << endl
          << "    -s, --search <STRING>     Restrict results to full paths matching STRING" << endl
-         << "    -f, --filename <STRING>   Search for filenames matching STRING" << endl
-         << "    -t, --filetype <STRING>   Search for filenames having extension STRING" << endl
          << "    --ignore-case             Case-insensitive pattern" << endl
          << "    --include <PATTERN>       Include files matching regex PATTERN" << endl
          << "    --exclude <PATTERN>       Exclude files matching regex PATTERN" << endl
-         << endl
-         << "  Search:     storm-extract [options]" << endl
          << endl
          << "  Extract:    storm-extract -x [options]" << endl
          << "    -x, --extract             Extract the files found" << endl
          << "    -o, --out <PATH>          The folder where the files are extracted (extract only)" << endl
          << "                                (default: current working directory)" << endl
-         // << "    -p, --path                During extraction, preserve the path hierarchy found" << endl
-         // << "                                inside the storage (extract only)" << endl
-         // << "    -c, --lowercase           Convert extracted file paths to lowercase (extract only)" <<endl
-         // << endl
-         // << "  Directory:  storm-extract -d [options]" << endl
-         // << "    -d, --directories         Print all directories found" << endl
-         << endl
-         << "Examples:" << endl
-         << endl
-         << "  1) List all files in CASC storage container (this will take a while):" << endl
-         << endl
-         << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -f ." << endl
-         << endl
-         << "  2) Extract a specific file:" << endl
-         << endl
-         << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -f \"path/to/the/file\" -o out -x" << endl
-         << endl
-         << "  3) Extract specific filenames (preserving heirarchy):" << endl
-         << endl
-         << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -f GameData.xml -o out -x" << endl
-         << endl
-         << "  4) Extract all English sounds (preserving heirarchy):" << endl
-         << endl
-         << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -s enus -o out -e wav -x" << endl
-         << "       ./storm-extract -i \"/Applications/Heroes of the Storm/\" -s enus -o out -e ogg -x" << endl
-         << endl
-         << "  5) Include and exclude patterns" << endl
-         << endl
-         << "       ./storm-extract -i 'StarCraft II' -v --ignore-case --include '\.SC2Map/' --exclude '(PreloadAssetDB|TextureReductionValues)\.txt$'" << endl
-         << endl
-         << "Copyright(c) 2016 Justin J. Novack <https://www.github.com/nydus/storm-extract>" << endl;
+         << endl;
 }
 
 // Overloaded echo command.
@@ -186,7 +132,7 @@ void echo(const int &output) {
 // Overloaded verbose command.
 void verbose() {
     if (!bQuiet && bVerbose) {
-          cout << endl;
+        cout << endl;
     }
 }
 
@@ -200,23 +146,6 @@ void verbose(const int &output) {
     if (!bQuiet && bVerbose) {
         cout << output;
     }
-}
-
-// Find out if the end of the string matches another string
-bool hasExtension(const std::string filename, const std::vector<string> extensions) {
-    for (size_t i = 0; i < extensions.size(); i++) {
-        // http://stackoverflow.com/questions/874134/find-if-string-ends-with-another-string-in-c
-        if (
-            // Prevent exception of type std::out_of_range: basic_string because the file extension is greater than the filename
-            (filename.length() > extensions[i].length()) &&
-            // http://stackoverflow.com/questions/874134/find-if-string-ends-with-another-string-in-c
-            (0 == filename.compare(filename.length() - extensions[i].length(), extensions[i].length(), extensions[i]))
-        ) {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 bool searchRegexMulti(const std::string filename, const std::vector<regex*> patterns) {
@@ -240,7 +169,7 @@ void printCount( int count, string description ) {
 }
 
 void printProgress( int percent, string description ) {
-    if (!bQuiet && bVerbose) {
+    if (!bQuiet) {
         std::printf("%c[2K", 27);
         std::cout << "\r  ";
         std::cout.width( 6 );
@@ -268,49 +197,24 @@ vector<string> searchArchive() {
             r.strFullPath = findData.szFileName;
             r.lFileSize = findData.dwFileSize;
 
-
             if (r.strFullPath.find(strSearchPattern) != std::string::npos) {
+                // Apply include/exclude filters
                 if (
-                    // No file pattern, No file type
-                    (!bPattern && !bFileExt) ||
-                    // No file pattern, Yes file type AND file type match.
-                    (!bPattern && bFileExt && hasExtension(r.strFileName, strFileExts)) ||
-                    // File name contains search pattern, No file type
-                    (bPattern && r.strFileName.find(strFilePattern) != std::string::npos && !bFileExt) ||
-                    // File name contains search pattern AND matches file type
-                    (bPattern && r.strFileName.find(strFilePattern) != std::string::npos && bFileExt &&
-                        hasExtension(r.strFileName, strFileExts))
+                    (includePatterns.size() > 0 && !searchRegexMulti(r.strFullPath, includePatterns)) ||
+                    (excludePatterns.size() > 0 && searchRegexMulti(r.strFullPath, excludePatterns))
                 ) {
-                    // Apply include/exclude filters
-                    if (
-                        (includePatterns.size() > 0 && !searchRegexMulti(r.strFullPath, includePatterns)) ||
-                        (excludePatterns.size() > 0 && searchRegexMulti(r.strFullPath, excludePatterns))
-                    ) {
-                        continue;
-                    }
-                    // if ( bDirectories ) {
-                    //     directoryResults.insert(r.strFullPath.substr(0,r.strFullPath.size()-r.strFileName.length()));
-                    // } else {
-                        ret.push_back(r.strFullPath);
-                        // Debug
-                        filesFound++;
-                        //printCount(filesFound, " matches...");
-                        verbose("  - ");
-                        verbose(findData.szFileName);
-                        verbose();
-                    // }
+                    continue;
+                }
+                ret.push_back(r.strFullPath);
+
+                if (!bExtract && !bQuiet) {
+                    cout << findData.szFileName << endl;
                 }
             }
         } while (CascFindNextFile(handle, &findData) && findData.szPlainName);
 
         CascFindClose(handle);
     }
-
-    // if ( bDirectories && !directoryResults.empty() ) {
-    //     for (dIter = directoryResults.begin(); dIter != directoryResults.end(); ++dIter) {
-    //         ret.push_back(*dIter);
-    //     }
-    // }
 
     return ret;
 }
@@ -319,13 +223,7 @@ size_t extractFile(string strFullPath) {
     char buffer[0x100000];  // 1MB buffer
     string strDestName = strDestination;
 
-/*
-    if (bUseFullPath)
     {
-        // if (bLowerCase){
-        //     transform(iter->strFullPath.begin(), iter->strFullPath.end(), iter->strFullPath.begin(), ::tolower);
-        // }
-*/
         strDestName += strFullPath;
 
         size_t offset = strDestName.find("\\");
@@ -354,15 +252,7 @@ size_t extractFile(string strFullPath) {
                 start = dest.find("/", start + 1);
             }
         }
-/*
-    } else {
-        // if (bLowerCase){
-        //     transform(strFileName.begin(), strFileName.end(), strFileName.begin(), ::tolower);
-        // }
-
-        strDestName += strFileName;
     }
-*/
 
     HANDLE hFile;
     size_t fileSize = 0;
@@ -395,14 +285,7 @@ size_t extractFile(string strFullPath) {
     return fileSize;
 }
 
-/** main()
- */
-
 int main(int argc, char** argv) {
-
-    // TODO MOVE THESE
-    int filesFound = 0;
-    int filesDone = 0;
 
     vector<tSearchResult> searchResults;
     std::set<string> directoryResults;
@@ -432,20 +315,6 @@ int main(int argc, char** argv) {
                     strSearchPattern = args.OptionArg();
                     break;
 
-                case OPT_FILEPTRN:
-                    bPattern = true;
-                    strFilePattern = args.OptionArg();
-                    break;
-
-                case OPT_FILEEXT:
-                    bFileExt = true;
-                    strFileExts.push_back(args.OptionArg());
-                    break;
-
-                case OPT_FULLPATH:
-                    bUseFullPath = true;
-                    break;
-
                 // case OPT_LOWERCASE:
                 //     bLowerCase = true;
                 //     break;
@@ -461,10 +330,6 @@ int main(int argc, char** argv) {
                 case OPT_EXTRACT:
                     bExtract = true;
                     break;
-
-                // case OPT_LISTDIRS:
-                //     bDirectories = true;
-                //     break;
 
                 case OPT_REGEX_ICASE:
                     icasePatterns = true;
@@ -497,6 +362,11 @@ int main(int argc, char** argv) {
         }
     }
 
+    if (strSource.empty()) {
+        cerr << "Missing -i argument";
+        return -1;
+    }
+
     // Remove trailing slashes at the end of the storage path (CascLib doesn't like that)
     if ((strSource[strSource.size() - 1] == '/') || (strSource[strSource.size() - 1] == '\\'))
         strSource = strSource.substr(0, strSource.size() - 1);
@@ -507,36 +377,18 @@ int main(int argc, char** argv) {
         return -2;
     }
 
-    // Explain what we want to do
-    echo("Searching for files: \n");
-    verbose("  * full paths matching '" + strSearchPattern + "'\n");
-    if (bPattern) {
-        verbose("  * filenames matching '" + strFilePattern + "'\n");
-    }
-    for (size_t i = 0; i < strFileExts.size(); i++) {
-        verbose("  * extensions matching '" + strFileExts[i] + "'\n");
-    }
-    if (bFileExt || bPattern) {
-        verbose();
-    }
-
-    // Search
     vector<string> results = searchArchive();
-    filesFound = results.size();
-    echo("  ");
-    echo(filesFound);
-    echo(" files found.\n");
-
-    // if ( bDirectories ) {
-    //    for (dIter=directoryResults.begin(); dIter!=directoryResults.end(); ++dIter)
-    //        std::cout << ' ' << *dIter << endl;
-    //    std::cout << '\n';
-    // }
+    
+    if (!bExtract) {
+        verbose();
+        echo(results.size());
+        echo(" files found.\n");
+    }
 
     // Extraction
     if (bExtract && !results.empty())
     {
-        verbose("\n");
+        int filesDone = 0;
         int progress;
         echo("Extracting files:\n");
 
@@ -546,13 +398,14 @@ int main(int argc, char** argv) {
         vector<string>::iterator iter, iterEnd;
         for (iter = results.begin(), iterEnd = results.end(); iter != iterEnd; ++iter)
         {
-            progress = int(filesDone * 100 / filesFound);
+            filesDone++;
+            progress = int(filesDone * 100 / results.size());
             printProgress(progress, iter->c_str());
             size_t bytesWritten = extractFile(iter->c_str());
-            if (bytesWritten > 0) {
-              filesDone++;
+            if (bytesWritten <= 0) {
+                // TODO: report warning? this might mean file is encrypted
             }
-            verbose(" ...done!\n");
+            verbose();
         }
         verbose("\n");
         echo("  ");
@@ -561,7 +414,6 @@ int main(int argc, char** argv) {
     }
 
     CascCloseStorage(hStorage);
-    echo();
     return 0;
 }
 
