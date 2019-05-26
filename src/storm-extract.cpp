@@ -17,7 +17,7 @@ using namespace std;
 
 
 // All the global variables
-string version = "1.1.0";
+string version = "1.2.0";
 
 struct tSearchResult {
     string strFileName;
@@ -31,7 +31,6 @@ enum {
     OPT_VERBOSE,
     OPT_QUIET,
     OPT_EXTRACT,
-    OPT_SRC,
     OPT_DEST,
     OPT_SEARCH,
     OPT_LOWERCASE,
@@ -60,8 +59,6 @@ const CSimpleOpt::SOption COMMAND_LINE_OPTIONS[] = {
     { OPT_QUIET,            "--quiet",          SO_NONE    },
     { OPT_EXTRACT,          "-x",               SO_NONE    },
     { OPT_EXTRACT,          "--extract",        SO_NONE    },
-    { OPT_SRC,              "-i",               SO_REQ_SEP },
-    { OPT_SRC,              "--in",             SO_REQ_SEP },
     { OPT_DEST,             "-o",               SO_REQ_SEP },
     { OPT_DEST,             "--out",            SO_REQ_SEP },
     //{ OPT_LOWERCASE,        "-c",               SO_NONE    },
@@ -78,17 +75,21 @@ const CSimpleOpt::SOption COMMAND_LINE_OPTIONS[] = {
 /* FUNCTIONS */
 void showUsage(const std::string &pathToExecutable) {
     cout << "stormex v" << version << endl
-         << "  Usage: " << pathToExecutable << " [options]" << endl
+         << "  Usage: " << pathToExecutable << " <PATH> [options]" << endl
          << endl
          << "This program can list and optionally extract files from a CASC storage container." << endl
          << endl
          << "    -h, --help                Display this help" << endl
          << endl
+         << "Arguments:" << endl
+         << "    <PATH>                    Path to game installation folder" << endl
+         << endl
          << "Options:" << endl
-         << "  Common:" << endl
-         << "    -i, --in <PATH>           Path to game installation folder" << endl
+         << "  General:" << endl
          << "    -v, --verbose             Prints more information" << endl
          << "    -q, --quiet               Prints nothing, nada, zip" << endl
+         << endl
+         << "  Common:" << endl
          << "    -s, --search <STRING>     Restrict results to full paths matching STRING" << endl
          << "    --ignore-case             Case-insensitive pattern" << endl
          << "    --include <PATTERN>       Include files matching ECMAScript regex PATTERN" << endl
@@ -97,7 +98,6 @@ void showUsage(const std::string &pathToExecutable) {
          << "  Extract:" << endl
          << "    -x, --extract             Extract the files found" << endl
          << "    -o, --out <PATH>          The folder where the files are extracted (extract only)" << endl
-         << "                                (default: current working directory)" << endl
          << endl;
 }
 
@@ -294,10 +294,6 @@ int main(int argc, char** argv) {
                     showUsage(argv[0]);
                     return 0;
 
-                case OPT_SRC:
-                    strSource = args.OptionArg();
-                    break;
-
                 case OPT_DEST:
                     strDestination = args.OptionArg();
                     break;
@@ -353,10 +349,11 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (strSource.empty()) {
-        cerr << "Missing -i argument" << endl;
+    if (!args.FileCount()) {
+        cerr << "Missing argument <PATH>" << endl;
         return -1;
     }
+    strSource = args.File(0);
 
     // Remove trailing slashes at the end of the storage path (CascLib doesn't like that)
     if ((strSource[strSource.size() - 1] == '/') || (strSource[strSource.size() - 1] == '\\'))

@@ -24,18 +24,22 @@ The executable will be put in `build/bin/stormex`
 ## Usage
 
 ```
-stormex v1.1.0
-  Usage: stormex [options]
+stormex v1.2.0
+  Usage: stormex <PATH> [options]
 
 This program can list and optionally extract files from a CASC storage container.
 
     -h, --help                Display this help
 
+Arguments:
+    <PATH>                    Path to game installation folder
+
 Options:
-  Common:
-    -i, --in <PATH>           Path to game installation folder
+  General:
     -v, --verbose             Prints more information
     -q, --quiet               Prints nothing, nada, zip
+
+  Common:
     -s, --search <STRING>     Restrict results to full paths matching STRING
     --ignore-case             Case-insensitive pattern
     --include <PATTERN>       Include files matching ECMAScript regex PATTERN
@@ -44,7 +48,6 @@ Options:
   Extract:
     -x, --extract             Extract the files found
     -o, --out <PATH>          The folder where the files are extracted (extract only)
-                                (default: current working directory)
 ```
 
 ### Examples
@@ -52,13 +55,13 @@ Options:
 #### List content of CASC based on regex pattern
 
 ```sh
-stormex -i '/mnt/s1/BnetGameLib/StarCraft II' --include '/BuildId.txt$'`
+stormex '/mnt/s1/BnetGameLib/StarCraft II' --include '/BuildId.txt$'`
 ```
 
 #### Extract content of CASC based on inclusion and exclusion patterns
 
 ```sh
-stormex -i '/mnt/s1/BnetGameLib/StarCraft II' --ignore-case -v \
+stormex '/mnt/s1/BnetGameLib/StarCraft II' --ignore-case -v \
   --include '\/(DocumentInfo|Objects|Regions|Triggers)$' \
   --include '\.(fx|xml|txt|json|galaxy|SC2Style|SC2Hotkeys|SC2Lib|TriggerLib|SC2Interface|SC2Locale|SC2Components|SC2Layout)$' \
   --exclude '(dede|eses|esmx|frfr|itit|kokr|plpl|ptbr|ruru|zhcn|zhtw)\.sc2data' \
