@@ -1,13 +1,9 @@
-build/
-*.log
-bin/
-
-# cmake Garbage
-*.cmake
-CMakeCache.txt
-CMakeFiles/
-Makefile
+# build junk
+build/*
+!build/.gitkeep
 
 # development files
-development/
+.vscode/
+
+# other
 out/

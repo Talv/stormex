@@ -1,9 +1,3 @@
-/*****************************************************************************/
-/* storm-extract.cpp                         Copyright 2016 Justin J. Novack */
-/*---------------------------------------------------------------------------*/
-/* list and extract files from the Heroes of the Storm CASC archives         */
-/*****************************************************************************/
-
 #include "../CascLib/src/CascLib.h"
 #include "../include/SimpleOpt.h"
 
@@ -83,7 +77,7 @@ const CSimpleOpt::SOption COMMAND_LINE_OPTIONS[] = {
 
 /* FUNCTIONS */
 void showUsage(const std::string &pathToExecutable) {
-    cout << "storm-extract v" << version << endl
+    cout << "stormex v" << version << endl
          << "  Usage: " << pathToExecutable << " [options]" << endl
          << endl
          << "This program can list and optionally extract files from a CASC storage container." << endl
@@ -97,10 +91,10 @@ void showUsage(const std::string &pathToExecutable) {
          << "    -q, --quiet               Prints nothing, nada, zip" << endl
          << "    -s, --search <STRING>     Restrict results to full paths matching STRING" << endl
          << "    --ignore-case             Case-insensitive pattern" << endl
-         << "    --include <PATTERN>       Include files matching regex PATTERN" << endl
-         << "    --exclude <PATTERN>       Exclude files matching regex PATTERN" << endl
+         << "    --include <PATTERN>       Include files matching ECMAScript regex PATTERN" << endl
+         << "    --exclude <PATTERN>       Exclude files matching ECMAScript regex PATTERN" << endl
          << endl
-         << "  Extract:    storm-extract -x [options]" << endl
+         << "  Extract:" << endl
          << "    -x, --extract             Extract the files found" << endl
          << "    -o, --out <PATH>          The folder where the files are extracted (extract only)" << endl
          << "                                (default: current working directory)" << endl
@@ -360,7 +354,7 @@ int main(int argc, char** argv) {
     }
 
     if (strSource.empty()) {
-        cerr << "Missing -i argument";
+        cerr << "Missing -i argument" << endl;
         return -1;
     }
 

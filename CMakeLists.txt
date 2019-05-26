@@ -13,7 +13,7 @@ endif()
 if (NOT EXISTS "${STORMEXTRACT_SOURCE_DIR}/CascLib/CMakeLists.txt")
     message(FATAL_ERROR
 "Missing dependency: CascLib
-storm-extract requires the CascLib library.
+stormex requires the CascLib library.
 It is provided as a GIT submodule of this repository.
 Did you forgot to execute the following commands?
    git submodule init
@@ -28,12 +28,12 @@ include_directories("${STORMEXTRACT_SOURCE_DIR}/src/"
                     "${STORMEXTRACT_SOURCE_DIR}/include/"
 )
 
-add_executable(storm-extract src/storm-extract.cpp)
-target_link_libraries(storm-extract casc)
+add_executable(stormex src/storm-extract.cpp)
+target_link_libraries(stormex casc)
 
 # Set the RPATH
 if (APPLE)
-    set_target_properties(storm-extract PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/.")
+    set_target_properties(stormex PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/.")
 elseif (UNIX)
-    set_target_properties(storm-extract PROPERTIES INSTALL_RPATH ".")
+    set_target_properties(stormex PROPERTIES INSTALL_RPATH ".")
 endif()
