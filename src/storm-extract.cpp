@@ -17,7 +17,7 @@ using namespace std;
 
 
 // All the global variables
-string version = "1.2.0";
+string version = "1.3.0";
 
 struct tSearchResult {
     string strFileName;
@@ -40,7 +40,7 @@ enum {
 };
 
 HANDLE hStorage;
-string strSearchPattern = "/";
+string strSearchPattern = "";
 std::vector<regex*> includePatterns;
 std::vector<regex*> excludePatterns;
 bool icasePatterns = false;
