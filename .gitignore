@@ -1,7 +1,6 @@
 build/
 *.log
 bin/
-node_modules/
 
 # cmake Garbage
 *.cmake
