@@ -1,7 +1,7 @@
 # stormex
 
 Command-line application to list and extract files from the [CASC](https://wowdev.wiki/CASC) (Content
-Addressable Storage Container) archives used in Blizzard games.
+Addressable Storage Container) used in Blizzard games.
 
 Tested on:
 
@@ -10,16 +10,28 @@ Tested on:
 
 ## Building
 
-Requires [cmake](http://www.cmake.org/) to build.
+### Linux
 
 ```sh
-git submodule init
-git submodule update
+git submodule update --init
 cd build && cmake ..
 make
 ```
 
-The executable will be put in `build/bin/stormex`
+> Executable will be put in `build/bin/stormex`
+
+### Windows
+
+* Requires `Visual Studio 15 2017 Build Tools`
+
+```sh
+git submodule update --init
+cd build
+cmake -G "Visual Studio 15 2017 Win64" ..
+MSBuild STORMEXTRACT.sln /p:Configuration=Release
+```
+
+> Executable will be put in `build\bin\Release\stormex.exe`
 
 ## Usage
 

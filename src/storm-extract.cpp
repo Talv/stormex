@@ -1,3 +1,4 @@
+#define __CASCLIB_SELF__
 #include "../CascLib/src/CascLib.h"
 #include "../include/SimpleOpt.h"
 
@@ -5,8 +6,21 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <unistd.h>
 #include <dirent.h>
+
+#if (defined(_WIN32) || defined(_WIN64))
+    #include <direct.h>
+    #define mkdir(name, chmod) _mkdir(name)
+#endif
+
+#if defined(WIN32) || defined(_WIN32) 
+    #define PATH_SEP_STR "\\"
+    #define PATH_SEP_CHAR '\\'
+#else 
+    #define PATH_SEP_STR "/"
+    #define PATH_SEP_CHAR '/'
+#endif 
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -17,7 +31,7 @@ using namespace std;
 
 
 // All the global variables
-string version = "1.3.0";
+string version = "1.4.0";
 
 struct tSearchResult {
     string strFileName;
@@ -211,40 +225,27 @@ vector<string> searchArchive() {
 }
 
 size_t extractFile(string strFullPath) {
-    char buffer[0x100000];  // 1MB buffer
-    string strDestName = strDestination;
+    char buffer[0x1000];
+    string strDestName = strDestination + strFullPath;
+    size_t pos;
 
+    // normalize slashes in the path
+    std::replace(strDestName.begin(), strDestName.end(), '\\', '/');
+
+    // ensure directory path to the file exists
+    pos = -1;
+    while ((pos = strDestName.find('/', pos + 1)) != string::npos)
     {
-        strDestName += strFullPath;
+        string dirname = strDestName.substr(0, pos);
 
-        size_t offset = strDestName.find("\\");
-        while (offset != string::npos)
-        {
-            strDestName = strDestName.substr(0, offset) + "/" + strDestName.substr(offset + 1);
-            offset = strDestName.find("\\");
-        }
-
-        offset = strDestName.find_last_of("/");
-        if (offset != string::npos)
-        {
-            string dest = strDestName.substr(0, offset + 1);
-
-            size_t start = dest.find("/", 0);
-            while (start != string::npos)
-            {
-                string dirname = dest.substr(0, start);
-
-                DIR* d = opendir(dirname.c_str());
-                if (!d)
-                    mkdir(dirname.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-                else
-                    closedir(d);
-
-                start = dest.find("/", start + 1);
-            }
-        }
+        DIR* d = opendir(dirname.c_str());
+        if (!d)
+            mkdir(dirname.c_str(), 0755);
+        else
+            closedir(d);
     }
 
+    // extract data
     HANDLE hFile;
     size_t fileSize = 0;
     if (CascOpenFile(hStorage, strFullPath.c_str(), CASC_LOCALE_ALL, 0, &hFile))
@@ -254,7 +255,7 @@ size_t extractFile(string strFullPath) {
         if (dest)
         {
             do {
-                if (CascReadFile(hFile, &buffer, 0x100000, &read)) {
+                if (CascReadFile(hFile, &buffer, sizeof(buffer), &read)) {
                     fileSize += fwrite(&buffer, read, 1, dest);
                 }
             } while (read > 0);
@@ -264,7 +265,7 @@ size_t extractFile(string strFullPath) {
         else
         {
             cerr << "NOFILE: (" << errno << ") Failed to extract '" << strFullPath << "' to " << strDestName << endl;
-        return 0;
+            return 0;
         }
         CascCloseFile(hFile);
     }
@@ -380,8 +381,8 @@ int main(int argc, char** argv) {
         int progress;
         echo("Extracting files:\n");
 
-        if (strDestination.at(strDestination.size() - 1) != '/')
-            strDestination += "/";
+        if (strDestination.at(strDestination.size() - 1) != PATH_SEP_CHAR)
+            strDestination += PATH_SEP_STR;
 
         vector<string>::iterator iter, iterEnd;
         for (iter = results.begin(), iterEnd = results.end(); iter != iterEnd; ++iter)

@@ -20,7 +20,10 @@ Did you forgot to execute the following commands?
    git submodule update")
 endif()
 
-
+if(WIN32)
+    set(CASC_BUILD_STATIC_LIB ON CACHE BOOL "Force Static library building to link test app")
+    set(CASC_BUILD_SHARED_LIB OFF CACHE BOOL "Compile dynamically linked library")
+endif()
 add_subdirectory(CascLib)
 
 include_directories("${STORMEXTRACT_SOURCE_DIR}/src/"
@@ -29,7 +32,11 @@ include_directories("${STORMEXTRACT_SOURCE_DIR}/src/"
 )
 
 add_executable(stormex src/storm-extract.cpp)
-target_link_libraries(stormex casc)
+if(WIN32)
+    target_link_libraries(stormex casc_static)
+else()
+    target_link_libraries(stormex casc)
+endif()
 
 # Set the RPATH
 if (APPLE)
