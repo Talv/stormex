@@ -8,9 +8,13 @@ Tested on:
 * StarCraft II
 * Heroes of The Storm
 
-## Building
+## Installation
 
-### Linux
+### Download
+
+* [**Compiled binaries**](https://github.com/Talv/stormex/releases/latest) (currently only available for __Windows__).
+
+### Building on Linux / macOS
 
 ```sh
 git submodule update --init
@@ -20,7 +24,7 @@ make
 
 > Executable will be put in `build/bin/stormex`
 
-### Windows
+### Building on Windows
 
 * Requires `Visual Studio 15 2017 Build Tools`
 
