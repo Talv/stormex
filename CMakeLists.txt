@@ -24,14 +24,26 @@ if(WIN32)
     set(CASC_BUILD_STATIC_LIB ON CACHE BOOL "Force Static library building to link test app")
     set(CASC_BUILD_SHARED_LIB OFF CACHE BOOL "Compile dynamically linked library")
 endif()
-add_subdirectory(CascLib)
 
-include_directories("${STORMEXTRACT_SOURCE_DIR}/src/"
+add_subdirectory(CascLib)
+add_subdirectory(plog)
+
+include_directories("${STORMEXTRACT_SOURCE_DIR}/include/"
                     "${STORMEXTRACT_SOURCE_DIR}/CascLib/src/"
-                    "${STORMEXTRACT_SOURCE_DIR}/include/"
+                    "${STORMEXTRACT_SOURCE_DIR}/cxxopts/include/"
+                    "${STORMEXTRACT_SOURCE_DIR}/plog/include/"
 )
 
-add_executable(stormex src/storm-extract.cpp)
+set(SRC_FILES
+    src/util.cc
+    src/storage.cc
+    src/stormex.cc
+)
+
+add_executable(stormex ${SRC_FILES})
+
+target_link_libraries(stormex plog)
+
 if(WIN32)
     target_link_libraries(stormex casc_static)
 else()

@@ -1,0 +1,13 @@
+BasedOnStyle: Webkit
+BreakBeforeBraces: Custom
+BraceWrapping:
+    BeforeElse: true
+    AfterControlStatement: false
+    # IndentWrappedFunctionNames: true
+    # AfterCaseLabel: true
+    AfterFunction: true
+    AfterClass: false
+    AfterStruct: true
+    AfterEnum: true
+    AfterUnion: true
+    AfterNamespace: true
