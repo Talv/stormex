@@ -1,10 +1,12 @@
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <algorithm>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <regex>
+#include <cctype>
 #include "util.hpp"
 
 struct stat info;

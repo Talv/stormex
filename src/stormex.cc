@@ -124,7 +124,7 @@ void parseArguments(int argc, char* argv[])
             ("X,extract-file",
                 "Extract file(s) matching exactly.",
                 cxxopts::value<std::vector<std::string>>(appCtx.m_extract.xFilenames), "[FILE...]")
-            ("o,outdir", "Output directory for extracted files.", cxxopts::value<std::string>(appCtx.m_extract.outDir)->default_value("./"), "[PATH]")
+            ("o,outdir", "Output directory for extracted files.", cxxopts::value<std::string>(appCtx.m_extract.outDir)->default_value("."), "[PATH]")
             ("p,stdout", "Pipe content of a file(s) to stdout instead writing it to the filesystem.", cxxopts::value<bool>(appCtx.m_extract.stdOut))
             ("P,progress", "Notify about progress during extraction.", cxxopts::value<bool>(appCtx.m_extract.progress))
             ("n,dry-run", "Simulate extraction process without writing any data to the filesystem.", cxxopts::value<bool>(appCtx.m_extract.dryRun));
@@ -194,7 +194,7 @@ void extractFilenames(StorageExplorer& stExplorer, const std::vector<std::string
 
         for (const auto& storedFilename : filesToExtract) {
             std::string targetFile = appCtx.m_extract.outDir;
-            if (targetFile.at(targetFile.size() - 1) != PATH_SEP_CHAR) {
+            if (targetFile.at(targetFile.size() - 1) != '\\' && targetFile.at(targetFile.size() - 1) != '/') {
                 targetFile += PATH_SEP_STR;
             }
             targetFile += storedFilename;
@@ -207,7 +207,7 @@ void extractFilenames(StorageExplorer& stExplorer, const std::vector<std::string
             size_t fileSize = 0;
             if (!appCtx.m_extract.dryRun) {
                 // normalize slashes in the paths received from CASC and force '/'
-                std::replace(targetFile.begin(), targetFile.end(), '\\', PATH_SEP_CHAR);
+                std::replace(targetFile.begin(), targetFile.end(), '\\', '/');
 
                 fileSize = stExplorer.extractFileToPath(storedFilename, targetFile);
                 PLOG_DEBUG << "Written " << formatFileSize(fileSize) << " to " << targetFile;
