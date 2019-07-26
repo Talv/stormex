@@ -1,7 +1,6 @@
 # stormex
 
-Command-line application to list and extract files from the [CASC](https://wowdev.wiki/CASC) (Content
-Addressable Storage Container) used in Blizzard games.
+Command-line application to enumerate and extract files from [CASC](https://wowdev.wiki/CASC) (Content Addressable Storage Container) used in Blizzard games.
 
 Tested on:
 
@@ -40,59 +39,89 @@ MSBuild STORMEXTRACT.sln /p:Configuration=Release
 ## Usage
 
 ```
-Usage: stormex <PATH> [options]
+Command-line application to enumerate and extract files from CASC (Content Addressable Storage Container) used in Blizzard games.
 
-This program can list and optionally extract files from a CASC storage container.
+Regex pattern is expected to follow ECMAScript syntax
 
-    -h, --help                Display this help
+Usage:
+  stormex [OPTION...] [STORAGE]
 
-Arguments:
-    <PATH>                    Path to game installation folder
+ Common options:
+  -h, --help     Print help.
+  -v, --verbose  Verbose output.
+  -q, --quiet    Supresses output entirely.
+      --version  Print version.
 
-Options:
-  General:
-    -v, --verbose             Prints more information
-    -q, --quiet               Prints nothing, nada, zip
+ Base options:
+  -S, --storage [PATH]  Path to directory with CASC.
 
-  Common:
-    -s, --search <STRING>     Restrict results to full paths matching STRING
-    --ignore-case             Case-insensitive pattern
-    --include <PATTERN>       Include files matching ECMAScript regex PATTERN
-    --exclude <PATTERN>       Exclude files matching ECMAScript regex PATTERN
+ List options:
+  -l, --list     List files inside CASC.
+  -d, --details  Show details about each file - such as its size.
 
-  Extract:
-    -x, --extract             Extract the files found
-    -o, --out <PATH>          The folder where the files are extracted (extract only)
+ Filter options:
+  -s, --search [SEARCH...]      Search for files using a substring.
+      --smart-case              Searches case insensitively if the pattern is
+                                all lowercase. Search case sensitively
+                                otherwise. (default: true)
+  -i, --in-regex [PATTERN...]   Include files matching regex.
+  -I, --in-iregex [PATTERN...]  Include files matching regex case
+                                insensitively.
+  -e, --ex-regex [PATTERN...]   Exclude files matching regex.
+  -E, --ex-iregex [PATTERN...]  Exclude files matching regex case
+                                insensitively.
+
+ Extract options:
+  -x, --extract-all             Extract all files matching search filters.
+  -X, --extract-file [FILE...]  Extract file(s) matching exactly.
+  -o, --outdir [PATH]           Output directory for extracted files.
+                                (default: ./)
+  -p, --stdout                  Pipe content of a file(s) to stdout instead
+                                writing it to the filesystem.
+  -P, --progress                Notify about progress during extraction.
+  -n, --dry-run                 Simulate extraction process without writing
+                                any data to the filesystem.
 ```
 
 ### Examples
 
-#### List content of CASC based on regex pattern
+#### List content
+
+List based on a search phrase
 
 ```sh
-stormex '/mnt/s1/BnetGameLib/StarCraft II' --include '/BuildId.txt$'`
+stormex '/mnt/s1/BnetGameLib/StarCraft II' -s 'buildid' -l
 ```
 
-#### Extract content of CASC based on inclusion and exclusion patterns
+List all files with details and sort by filesize.
 
 ```sh
-stormex '/mnt/s1/BnetGameLib/StarCraft II' --ignore-case -v \
-  --include '\/(DocumentInfo|Objects|Regions|Triggers)$' \
-  --include '\.(fx|xml|txt|json|galaxy|SC2Style|SC2Hotkeys|SC2Lib|TriggerLib|SC2Interface|SC2Locale|SC2Components|SC2Layout)$' \
-  --exclude '(dede|eses|esmx|frfr|itit|kokr|plpl|ptbr|ruru|zhcn|zhtw)\.sc2data' \
-  --exclude '(PreloadAssetDB|TextureReductionValues)\.txt$' \
+stormex '/mnt/s1/BnetGameLib/StarCraft II' -ld | sort -h
+```
+
+#### Extract files based on inclusion and exclusion patterns
+
+```sh
+stormex '/mnt/s1/BnetGameLib/StarCraft II' \
+  -I '\/(DocumentInfo|Objects|Regions|Triggers)$' \
+  -I '\.(fx|xml|txt|json|galaxy|SC2Style|SC2Hotkeys|SC2Lib|TriggerLib|SC2Interface|SC2Locale|SC2Components|SC2Layout)$' \
+  -E '(dede|eses|esmx|frfr|itit|kokr|plpl|ptbr|ruru|zhcn|zhtw)\.sc2data' \
+  -E '(PreloadAssetDB|TextureReductionValues)\.txt$' \
   -x -o './out'
+```
+
+#### Extract to stdout
+
+Extract specific file to `stdout` and pipe the stream to another program. For example convert dds to png and display it with `imagick`.
+
+```sh
+stormex -S '/mnt/s1/BnetGameLib/StarCraft II' -X 'mods/core.sc2mod/base.sc2data/EditorData/Images/HeroesEditor_Logo.tga' -p | display tga:
+```
+
+```sh
+stormex -S '/mnt/s1/BnetGameLib/StarCraft II' -X 'mods/core.sc2mod/base.sc2data/EditorData/Images/EditorLogo.dds' -p | magick dds: png: | display png:
 ```
 
 ## Credits
 
-The library absolutely, unequivocably, could not be possible without
-[ladislav-zezula's CascLib](https://github.com/ladislav-zezula/CascLib)
-library. Many thanks to [ladislav-zezula](https://github.com/ladislav-zezula).
-
-~~Most of the program was canibalized from
-[Kanma's CASCExtractor](https://github.com/Kanma/CASCExtractor/) with the
-purpose of customizing it for Heroes of the Storm and integration into
-[NodeJS](https://www.nodejs.org).~~
-
-Most of the program was canibalized from [storm-extract](https://github.com/nydus/storm-extract) with the purpose of reducing code complexity by removing NodeJS stuff. And transitioning it into more streamlined cli app.
+* Powered by [CascLib](https://github.com/ladislav-zezula/CascLib)
