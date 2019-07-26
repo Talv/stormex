@@ -1,4 +1,6 @@
 #include <iostream>
+#include <iomanip>
+#include <algorithm>
 #include <string>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -22,9 +24,6 @@ bool pathExists(const std::string& target)
 
 int ensureDirExists(std::string strDestName)
 {
-    // normalize slashes in the paths received from CASC and force '/'
-    std::replace(strDestName.begin(), strDestName.end(), '\\', '/');
-
     // ensure directory path to the file exists
     size_t pos = -1;
     while ((pos = strDestName.find('/', pos + 1)) != std::string::npos) {
@@ -52,21 +51,21 @@ template <typename T>
 std::string valueToString(T num)
 {
     std::ostringstream convert;
-    convert << num;
+    convert << std::setprecision(8) << num;
     return convert.str();
 }
 
 static double roundOff(double n)
 {
-    double d = n * 100.0;
+    double d = n * 10.0;
     int i = d + 0.5;
-    d = (float)i / 100.0;
+    d = (float)i / 10.0;
     return d;
 }
 
 std::string formatFileSize(size_t size)
 {
-    static const char *SIZES[] = { "B", "KB", "MB", "GB" };
+    static const char *SIZES[] = { "B", "K", "M", "G" };
     int div = 0;
     size_t rem = 0;
 
@@ -77,7 +76,9 @@ std::string formatFileSize(size_t size)
     }
 
     double size_d = (float)size + (float)rem / 1024.0;
-    std::string result = valueToString(roundOff(size_d)) + " " + SIZES[div];
+    std::string result = valueToString(roundOff(size_d)) + SIZES[div];
+    std::replace(result.begin(), result.end(), '.', ',');
+
     return result;
 }
 

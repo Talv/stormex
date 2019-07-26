@@ -1,4 +1,3 @@
-#include <set>
 #include "storage.hpp"
 
 int StorageExplorer::openStorage(std::string src)
@@ -20,23 +19,30 @@ bool StorageExplorer::closeStorage()
     return CascCloseStorage(m_hStorage);
 }
 
-std::vector<std::string> StorageExplorer::enumerateFiles()
+bool StorageExplorer::enumerateFiles(std::vector<STORAGE_SEARCH_RESULT*>& searchResults)
 {
-    std::vector<std::string> ret;
-
     CASC_FIND_DATA findData;
     HANDLE handle = CascFindFirstFile(m_hStorage, "*", &findData, NULL);
 
+    if (handle == INVALID_HANDLE_VALUE) {
+        PLOG_FATAL << "CascFindFirstFile E(" << GetLastError() << ")";
+        return false;
+    }
+
     do {
-        findData.dwFileSize;
-        findData.FileKey;
-        findData.szFileName;
-        ret.push_back(findData.szFileName);
+        if (!findData.bFileAvailable) continue;
+
+        STORAGE_SEARCH_RESULT *record = new STORAGE_SEARCH_RESULT();
+        record->filename = findData.szFileName;
+        memcpy(record->CKey, findData.CKey, sizeof(record->CKey));
+        memcpy(record->EKey, findData.EKey, sizeof(record->EKey));
+        record->dwFileSize = findData.dwFileSize;
+        searchResults.push_back(record);
     } while (CascFindNextFile(handle, &findData));
 
     CascFindClose(handle);
 
-    return ret;
+    return true;
 }
 
 size_t StorageExplorer::extractFileToPath(const std::string& storedFilename, const std::string& targetFilename)

@@ -5,11 +5,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <fstream>
+#include <algorithm>
 
 #include "cxxopts.hpp"
 #include "common.hpp"
 #include "util.hpp"
 #include "storage.hpp"
+#include "common/Common.h"
 
 class StormexContext {
 public:
@@ -31,7 +33,8 @@ public:
     } m_filters;
 
     struct {
-        std::vector<std::string> extractFiles;
+        bool doExtractAll;
+        std::vector<std::string> xFilenames;
         std::string outDir;
         bool stdOut;
         bool progress;
@@ -83,7 +86,7 @@ void parseArguments(int argc, char* argv[])
             "\n"
             "Command-line application to enumerate and extract files from CASC (Content Addressable Storage Container) used in Blizzard games.\n"
             "\n"
-            "Expected regex pattern should follow ECMAScript syntax\n");
+            "Regex pattern is expected to follow ECMAScript syntax\n");
         options
             .positional_help("[STORAGE]")
             .show_positional_help();
@@ -91,14 +94,14 @@ void parseArguments(int argc, char* argv[])
         options.add_options("Common")
             ("h,help", "Print help.")
             ("v,verbose", "Verbose output.", cxxopts::value<bool>())
-            ("q,quiet", "Supresses output of messages entirely.", cxxopts::value<bool>())
+            ("q,quiet", "Supresses output entirely.", cxxopts::value<bool>())
             ("version", "Print version.");
 
         options.add_options("Base")
-            ("S,storage", "Path to directory with CASC.", cxxopts::value<std::string>(appCtx.m_base.storageSrc), "[PATH]")
-            ("L,listfile",
-                "Map filenames from provided newline delimeted (LF or CRLF) textfile, instead of enumerating content of the archive, "
-                "which is an extensive operation. It combines well when extracting single files, or a small group that matches given substring or regex pattern.", cxxopts::value<std::string>(appCtx.m_base.listfileSrc), "[FILE]");
+            ("S,storage", "Path to directory with CASC.", cxxopts::value<std::string>(appCtx.m_base.storageSrc), "[PATH]");
+            // ("L,listfile",
+            //     "Map filenames from provided newline delimeted (LF or CRLF) textfile, instead of enumerating content of the archive, "
+            //     "which is an extensive operation. It combines well when extracting single files, or a small group that matches given substring or regex pattern.", cxxopts::value<std::string>(appCtx.m_base.listfileSrc), "[FILE]");
 
         options.add_options("List")
             ("l,list", "List files inside CASC.", cxxopts::value<bool>(appCtx.m_list.listFiles))
@@ -115,10 +118,13 @@ void parseArguments(int argc, char* argv[])
             ("E,ex-iregex", "Exclude files matching regex case insensitively.", cxxopts::value<std::vector<std::string>>(), "[PATTERN...]");
 
         options.add_options("Extract")
-            ("x,extract",
-                "Extract file(s) matching exactly. Argument is optional - if ommitted it will extract all files matching search filters.",
-                cxxopts::value<std::vector<std::string>>(appCtx.m_extract.extractFiles), "[FILE...]")
-            ("O,outdir", "Output directory for extracted files.", cxxopts::value<std::string>(appCtx.m_extract.outDir)->default_value("./"), "[PATH]")
+            ("x,extract-all",
+                "Extract all files matching search filters.",
+                cxxopts::value<bool>(appCtx.m_extract.doExtractAll))
+            ("X,extract-file",
+                "Extract file(s) matching exactly.",
+                cxxopts::value<std::vector<std::string>>(appCtx.m_extract.xFilenames), "[FILE...]")
+            ("o,outdir", "Output directory for extracted files.", cxxopts::value<std::string>(appCtx.m_extract.outDir)->default_value("./"), "[PATH]")
             ("p,stdout", "Pipe content of a file(s) to stdout instead writing it to the filesystem.", cxxopts::value<bool>(appCtx.m_extract.stdOut))
             ("P,progress", "Notify about progress during extraction.", cxxopts::value<bool>(appCtx.m_extract.progress))
             ("n,dry-run", "Simulate extraction process without writing any data to the filesystem.", cxxopts::value<bool>(appCtx.m_extract.dryRun));
@@ -133,7 +139,7 @@ void parseArguments(int argc, char* argv[])
         }
 
         if (result.count("version")) {
-            std::cerr << "stormex v" << stormexVersion << std::endl;
+            std::cerr << "stormex v" << stormexVersion << " | CascLib v" << CASCLIB_VERSION_STRING << std::endl;
             exit(0);
         }
 
@@ -165,7 +171,7 @@ void parseArguments(int argc, char* argv[])
     }
 }
 
-void extractFiles(StorageExplorer& stExplorer, const std::vector<std::string>& filesToExtract)
+void extractFilenames(StorageExplorer& stExplorer, const std::vector<std::string>& filesToExtract)
 {
     PLOG_DEBUG << "Preparing to extract " << filesToExtract.size() << " files..";
     if (appCtx.m_extract.dryRun) {
@@ -193,11 +199,18 @@ void extractFiles(StorageExplorer& stExplorer, const std::vector<std::string>& f
             }
             targetFile += storedFilename;
 
-            PLOG_DEBUG << "Extracting file: " << storedFilename;
+            if (appCtx.m_extract.progress) {
+                // TODO: display progress
+            }
+
+            PLOG_INFO << "Extracting file " << storedFilename;
             size_t fileSize = 0;
             if (!appCtx.m_extract.dryRun) {
+                // normalize slashes in the paths received from CASC and force '/'
+                std::replace(targetFile.begin(), targetFile.end(), '\\', PATH_SEP_CHAR);
+
                 fileSize = stExplorer.extractFileToPath(storedFilename, targetFile);
-                PLOG_DEBUG << "Saved at: " << targetFile << " [" << formatFileSize(fileSize) << "]";
+                PLOG_DEBUG << "Written " << formatFileSize(fileSize) << " to " << targetFile;
             }
             else {
             }
@@ -205,7 +218,7 @@ void extractFiles(StorageExplorer& stExplorer, const std::vector<std::string>& f
     }
 }
 
-bool searchRegexMulti(const std::string filename, const std::vector<std::regex>& patterns)
+bool searchRegexMulti(const std::string& filename, const std::vector<std::regex>& patterns)
 {
     for (const auto& current : patterns) {
         if (regex_search(filename, current)) {
@@ -216,22 +229,22 @@ bool searchRegexMulti(const std::string filename, const std::vector<std::regex>&
     return false;
 }
 
-std::vector<std::string> filterFiles(const std::vector<std::string>& inputList)
+std::vector<STORAGE_SEARCH_RESULT*> filterFiles(const std::vector<STORAGE_SEARCH_RESULT*>& inputList)
 {
-    std::vector<std::string> filteredList;
+    std::vector<STORAGE_SEARCH_RESULT*> filteredList;
 
     for (const auto& entry : inputList) {
         if (appCtx.m_filters.searchPhrase.size()) {
             bool c = false;
             for (const auto& needle : appCtx.m_filters.searchPhrase) {
-                c = findStringIC(entry, needle);
+                c = findStringIC(entry->filename, needle);
                 if (c) break;
             }
             if (!c) continue;
         }
 
-        if (appCtx.m_filters.includePatterns.size() && !searchRegexMulti(entry, appCtx.m_filters.includePatterns)) continue;
-        if (appCtx.m_filters.excludePatterns.size() && searchRegexMulti(entry, appCtx.m_filters.excludePatterns)) continue;
+        if (appCtx.m_filters.includePatterns.size() && !searchRegexMulti(entry->filename, appCtx.m_filters.includePatterns)) continue;
+        if (appCtx.m_filters.excludePatterns.size() && searchRegexMulti(entry->filename, appCtx.m_filters.excludePatterns)) continue;
         filteredList.push_back(entry);
     }
 
@@ -253,10 +266,13 @@ std::vector<std::string> readListFile(const std::string& filename)
     return filelist;
 }
 
-void listFiles(StorageExplorer& stExplorer)
+std::vector<STORAGE_SEARCH_RESULT*> enumerateFiles(StorageExplorer& stExplorer)
 {
     PLOG_INFO << "Enumerating all files in storage..";
-    auto inputList = stExplorer.enumerateFiles();
+    std::vector<STORAGE_SEARCH_RESULT*> inputList;
+    if (!stExplorer.enumerateFiles(inputList)) {
+        return inputList;
+    }
     auto filteredList = inputList;
 
     if (appCtx.m_filters.searchPhrase.size() || appCtx.m_filters.includePatterns.size() || appCtx.m_filters.excludePatterns.size()) {
@@ -264,11 +280,8 @@ void listFiles(StorageExplorer& stExplorer)
         filteredList = filterFiles(inputList);
     }
 
-    for (const auto& entry : filteredList) {
-        std::cout << entry << std::endl;
-    }
-
-    PLOG_DEBUG << "count " << inputList.size() << " : " << filteredList.size();
+    PLOG_DEBUG << "list count " << inputList.size() << " : " << filteredList.size();
+    return filteredList;
 }
 
 int main(int argc, char* argv[])
@@ -286,11 +299,35 @@ int main(int argc, char* argv[])
     PLOG_INFO << "Storage opened " << static_cast<void*>(stExplorer.getHandle());
 
     try {
+        auto fResults = enumerateFiles(stExplorer);
+
         if (appCtx.m_list.listFiles) {
-            listFiles(stExplorer);
+            for (const auto& entry : fResults) {
+                char keyBuff[MD5_STRING_SIZE + 1];
+                std::string tmps;
+                if (appCtx.m_list.showDetails) {
+                    tmps = formatFileSize(entry->dwFileSize);
+                    std::cout << tmps << std::setw(8 - tmps.length()) << " ";
+                    std::cout << StringFromMD5((LPBYTE)entry->CKey, keyBuff) << " ";
+                    std::cout << StringFromMD5((LPBYTE)entry->EKey, keyBuff) << " ";
+                }
+                std::cout << entry->filename;
+                std::cout << std::endl;
+            }
         }
-        else if (appCtx.m_extract.extractFiles.size()) {
-            extractFiles(stExplorer, appCtx.m_extract.extractFiles);
+        else if (appCtx.m_extract.doExtractAll) {
+            std::vector<std::string> fList;
+            for (const auto& item : fResults) {
+                fList.push_back(item->filename);
+            }
+            extractFilenames(stExplorer, fList);
+        }
+        else if (appCtx.m_extract.xFilenames.size()) {
+            for (auto& item : appCtx.m_extract.xFilenames) {
+                // force backslashes regardless of the platform - that's the expected output from CASC anyway, and it'll get normalized later
+                std::replace(item.begin(), item.end(), '/', '\\');
+            }
+            extractFilenames(stExplorer, appCtx.m_extract.xFilenames);
         }
     } catch (const std::exception& e) {
         stExplorer.closeStorage();

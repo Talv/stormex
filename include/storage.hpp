@@ -11,9 +11,41 @@
 #include "common.hpp"
 #include "util.hpp"
 
-struct StorageSearchResult
+// Based on CASC_FIND_DATA
+struct STORAGE_SEARCH_RESULT
 {
-    size_t fileSize;
+    // Full name of the found file. In case when this is CKey/EKey,
+    // this will be just string representation of the key stored in 'FileKey'
+    std::string filename;
+
+    // Content key. This is present if the CASC_FEATURE_ROOT_CKEY is present
+    BYTE CKey[MD5_HASH_SIZE];
+
+    // Encoded key. This is always present.
+    BYTE EKey[MD5_HASH_SIZE];
+
+    // Tag mask. Only valid if the storage supports tags, otherwise 0
+    ULONGLONG TagBitMask;
+
+    // File data ID. Only valid if the storage supports file data IDs, otherwise CASC_INVALID_ID
+    DWORD dwFileDataId;
+
+    // Size of the file, as retrieved from CKey entry or EKey entry
+    DWORD dwFileSize;
+
+    // Locale flags. Only valid if the storage supports locale flags, otherwise CASC_INVALID_ID
+    DWORD dwLocaleFlags;
+
+    // Content flags. Only valid if the storage supports content flags, otherwise CASC_INVALID_ID
+    DWORD dwContentFlags;
+
+    // Hints as for which open method is suitable
+    DWORD bFileAvailable:1;                     // If true the file is available locally
+    DWORD bCanOpenByName:1;
+    DWORD bCanOpenByDataId:1;
+    DWORD bCanOpenByCKey:1;
+    DWORD bCanOpenByEKey:1;
+    CASC_NAME_TYPE NameType;
 };
 
 /**
@@ -44,7 +76,7 @@ public:
 
     // TODO: CascGetStorageInfo
 
-    std::vector<std::string> enumerateFiles();
+    bool enumerateFiles(std::vector<STORAGE_SEARCH_RESULT*>& searchResults);
 
     /**
      * @brief extract data of given file to location specified under filesystem

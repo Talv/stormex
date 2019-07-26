@@ -1,6 +1,6 @@
 [submodule "CascLib"]
 	path = CascLib
-	url = https://github.com/ladislav-zezula/CascLib.git
+	url = https://github.com/Talv/CascLib.git
 [submodule "cxxopts"]
 	path = cxxopts
 	url = https://github.com/jarro2783/cxxopts.git
