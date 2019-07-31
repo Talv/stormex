@@ -11,6 +11,7 @@
 #include "common.hpp"
 #include "util.hpp"
 #include "storage.hpp"
+#include "cascfuse.hpp"
 #include "common/Common.h"
 
 class StormexContext {
@@ -40,6 +41,10 @@ public:
         bool progress;
         bool dryRun;
     } m_extract;
+
+    struct {
+        std::string mountPoint;
+    } m_mount;
 
     void scanExtraArgs(cxxopts::ParseResult pResult)
     {
@@ -129,12 +134,16 @@ void parseArguments(int argc, char* argv[])
             ("P,progress", "Notify about progress during extraction.", cxxopts::value<bool>(appCtx.m_extract.progress))
             ("n,dry-run", "Simulate extraction process without writing any data to the filesystem.", cxxopts::value<bool>(appCtx.m_extract.dryRun));
 
+        options.add_options("Mount")
+            ("m,mount",
+                "Mount CASC as a filesystem", cxxopts::value<std::string>(appCtx.m_mount.mountPoint), "[MOUNTPOINT]");
+
         options.parse_positional({"storage"});
 
         auto result = options.parse(argc, argv);
 
         if (result.count("help")) {
-            std::cerr << options.help({ "Common", "Base", "List", "Filter", "Extract" }) << std::endl;
+            std::cerr << options.help({ "Common", "Base", "List", "Filter", "Extract", "Mount" }) << std::endl;
             exit(0);
         }
 
@@ -146,11 +155,12 @@ void parseArguments(int argc, char* argv[])
         // logging verbosity
         plog::Severity level = plog::Severity::warning;
         if (result.count("verbose")) {
-            if (result.count("verbose") >= plog::Severity::debug) {
+            auto vLvl = plog::Severity::verbose - plog::Severity::warning;
+            if (result.count("verbose") > vLvl) {
                 std::cerr << "Maximum level of logging verbosity has been reached [" << plog::Severity::debug << "]" << std::endl;
                 exit(1);
             }
-            level = static_cast<plog::Severity>(plog::Severity::fatal + result.count("verbose"));
+            level = static_cast<plog::Severity>(plog::Severity::warning + result.count("verbose"));
         }
         else if (result.count("quiet")) {
             plog::Severity level = plog::Severity::none;
@@ -237,7 +247,7 @@ std::vector<STORAGE_SEARCH_RESULT*> filterFiles(const std::vector<STORAGE_SEARCH
         if (appCtx.m_filters.searchPhrase.size()) {
             bool c = false;
             for (const auto& needle : appCtx.m_filters.searchPhrase) {
-                c = findStringIC(entry->filename, needle);
+                c = stringFindIC(entry->filename, needle);
                 if (c) break;
             }
             if (!c) continue;
@@ -291,7 +301,7 @@ int main(int argc, char* argv[])
     StorageExplorer stExplorer;
     int tmp;
 
-    PLOG_INFO << "Opening storage..";
+    LOG_DEBUG << "Opening storage..";
     if ((tmp = stExplorer.openStorage(appCtx.m_base.storageSrc)) != 0) {
         PLOG_FATAL << "Failed to open the storage: " << appCtx.m_base.storageSrc << " E(" << tmp << ")";
         exit(-1);
@@ -299,6 +309,10 @@ int main(int argc, char* argv[])
     PLOG_INFO << "Storage opened " << static_cast<void*>(stExplorer.getHandle());
 
     try {
+        if (appCtx.m_mount.mountPoint.length()) {
+            return cascfs_mount(appCtx.m_mount.mountPoint, stExplorer.getHandle());
+        }
+
         auto fResults = enumerateFiles(stExplorer);
 
         if (appCtx.m_list.listFiles) {
@@ -334,9 +348,6 @@ int main(int argc, char* argv[])
         PLOG_FATAL << e.what();
         throw;
     }
-
-    PLOG_DEBUG << "Closing storage..";
-    stExplorer.closeStorage();
 
     return 0;
 }

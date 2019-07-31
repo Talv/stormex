@@ -1,5 +1,11 @@
 #include "storage.hpp"
 
+StorageExplorer::~StorageExplorer()
+{
+    PLOG_DEBUG << "Closing storage..";
+    closeStorage();
+}
+
 int StorageExplorer::openStorage(std::string src)
 {
     // Remove trailing slash at the end of path (CascLib doesn't like that, supposedly)

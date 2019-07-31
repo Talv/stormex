@@ -84,7 +84,7 @@ std::string formatFileSize(size_t size)
     return result;
 }
 
-bool findStringIC(const std::string& strHaystack, const std::string& strNeedle)
+bool stringFindIC(const std::string& strHaystack, const std::string& strNeedle)
 {
     auto it = std::search(
         strHaystack.begin(), strHaystack.end(),
@@ -93,4 +93,22 @@ bool findStringIC(const std::string& strHaystack, const std::string& strNeedle)
             return std::toupper(ch1) == std::toupper(ch2);
         });
     return (it != strHaystack.end());
+}
+
+bool stringEqualIC(const std::string& str1, const std::string& str2)
+{
+    return str1.size() == str2.size() && std::equal(str1.begin(), str1.end(), str2.begin(), [](const char& ch1, const char& ch2) {
+        return std::toupper(ch1) == std::toupper(ch2);
+    });
+}
+
+void stringToLower(std::string& str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+}
+
+std::string stringToLowerCopy(std::string str)
+{
+    std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+    return str;
 }

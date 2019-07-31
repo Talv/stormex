@@ -75,12 +75,15 @@ Usage:
   -x, --extract-all             Extract all files matching search filters.
   -X, --extract-file [FILE...]  Extract file(s) matching exactly.
   -o, --outdir [PATH]           Output directory for extracted files.
-                                (default: ./)
+                                (default: .)
   -p, --stdout                  Pipe content of a file(s) to stdout instead
                                 writing it to the filesystem.
   -P, --progress                Notify about progress during extraction.
   -n, --dry-run                 Simulate extraction process without writing
                                 any data to the filesystem.
+
+ Mount options:
+  -m, --mount [MOUNTPOINT]  Mount CASC as a filesystem
 ```
 
 ### Examples
@@ -103,7 +106,7 @@ stormex '/mnt/s1/BnetGameLib/StarCraft II' -ld | sort -h
 
 ```sh
 stormex '/mnt/s1/BnetGameLib/StarCraft II' \
-  -I '\/(DocumentInfo|Objects|Regions|Triggers)$' \
+  -I '\\(DocumentInfo|Objects|Regions|Triggers)$' \
   -I '\.(fx|xml|txt|json|galaxy|SC2Style|SC2Hotkeys|SC2Lib|TriggerLib|SC2Interface|SC2Locale|SC2Components|SC2Layout)$' \
   -E '(dede|eses|esmx|frfr|itit|kokr|plpl|ptbr|ruru|zhcn|zhtw)\.sc2data' \
   -E '(PreloadAssetDB|TextureReductionValues)\.txt$' \
@@ -121,6 +124,40 @@ stormex -S '/mnt/s1/BnetGameLib/StarCraft II' -X 'mods/core.sc2mod/base.sc2data/
 ```sh
 stormex -S '/mnt/s1/BnetGameLib/StarCraft II' -X 'mods/core.sc2mod/base.sc2data/EditorData/Images/EditorLogo.dds' -p | magick dds: png: | display png:
 ```
+
+#### Mount as FUSE filesystem
+
+```sh
+mkdir -p cascfs
+stormex -v -S '/mnt/s1/BnetGameLib/StarCraft II' -m ./cascfs
+```
+
+Result:
+
+```sh
+$ ls -l ./cascfs
+dr-xr-xr--   - root  1 Jan  1970 campaigns
+dr-xr-xr--   - root  1 Jan  1970 CKEY
+.r-xr-xr-- 17M root  1 Jan  1970 DOWNLOAD
+.r-xr-xr-- 41M root  1 Jan  1970 ENCODING
+.r-xr-xr-- 59k root  1 Jan  1970 INSTALL
+dr-xr-xr--   - root  1 Jan  1970 mods
+.r-xr-xr-- 20M root  1 Jan  1970 ROOT
+dr-xr-xr--   - root  1 Jan  1970 versions.osxarchive
+dr-xr-xr--   - root  1 Jan  1970 versions.winarchive
+```
+
+##### Windows support via Dokany
+
+[Dokany](https://github.com/dokan-dev) provides a FUSE wrapper for Windows. You've to install [Dokany's system driver](https://github.com/dokan-dev/dokany/wiki/Installation) in order for this feature to work.
+
+As `[MOUNTPOINT]` argument provide a free drive letter. In following example CASC will be mounted at `S:\`.
+
+```sh
+stormex.exe -v -S X:\shared\SC2.4.8.4.73286 -m S
+```
+
+[![](https://i.imgur.com/1y7zCTL.png)](https://i.imgur.com/1y7zCTL.png)
 
 ## Credits
 

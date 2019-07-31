@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 2.6)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${STORMEXTRACT_BINARY_DIR}/bin")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${STORMEXTRACT_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${STORMEXTRACT_BINARY_DIR}/bin")
+set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 set(default_build_type "RelWithDebInfo")
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -15,10 +16,16 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
         "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
+# compile flags
 set(CMAKE_CXX_FLAGS "-std=c++11")
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
+set(FUSE_REQUIRED_FLAGS "-D_FILE_OFFSET_BITS=64 -DFUSE_USE_VERSION=27")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${FUSE_REQUIRED_FLAGS}")
+
+# modules
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules")
 
 if (NOT EXISTS "${STORMEXTRACT_SOURCE_DIR}/CascLib/CMakeLists.txt")
     message(FATAL_ERROR
@@ -38,6 +45,14 @@ endif()
 add_subdirectory(CascLib)
 add_subdirectory(plog)
 
+# FUSE
+find_package(FUSE REQUIRED)
+if(NOT FUSE_FOUND)
+    message(FATAL_ERROR "Failed to find fuse")
+else()
+    include_directories(${FUSE_INCLUDE_DIR})
+endif()
+
 include_directories("${STORMEXTRACT_SOURCE_DIR}/include/"
                     "${STORMEXTRACT_SOURCE_DIR}/CascLib/src/"
                     "${STORMEXTRACT_SOURCE_DIR}/cxxopts/include/"
@@ -47,12 +62,15 @@ include_directories("${STORMEXTRACT_SOURCE_DIR}/include/"
 set(SRC_FILES
     src/util.cc
     src/storage.cc
+    src/cascfuse.cc
     src/stormex.cc
 )
 
 add_executable(stormex ${SRC_FILES})
 
-target_link_libraries(stormex plog)
+target_link_libraries(stormex
+    ${FUSE_LIBRARIES}
+)
 
 if(WIN32)
     target_link_libraries(stormex casc_static)
