@@ -17,7 +17,12 @@
 #include "common.hpp"
 #include "util.hpp"
 
-enum FsNodeKind {
+#ifndef WIN32
+    #define FUSE_STAT struct stat
+    #define FUSE_OFF_T off_t
+#endif
+
+enum class FsNodeKind {
     Unknown,
     Root,
     Folder,
@@ -227,11 +232,11 @@ public:
 
 FsTree cfFileTree;
 
-static int cascf_getattr(const char *path, struct stat *stbuf)
+static int cascfs_getattr(const char *path, FUSE_STAT *stbuf)
 {
     LOG_VERBOSE << path;
     int res = 0;
-    memset(stbuf, 0, sizeof(struct stat));
+    memset(stbuf, 0, sizeof(*stbuf));
 
     auto fNode = cfFileTree.GetNodeAtPath(path);
     if (fNode != NULL) {
@@ -268,7 +273,7 @@ static int cascf_getattr(const char *path, struct stat *stbuf)
     return res;
 }
 
-static int cascf_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+static int cascfs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, FUSE_OFF_T offset, struct fuse_file_info *fi)
 {
     LOG_VERBOSE << path;
 
@@ -287,7 +292,7 @@ static int cascf_readdir(const char *path, void *buf, fuse_fill_dir_t filler, of
     return 0;
 }
 
-static int cascf_open(const char *path, struct fuse_file_info *fi)
+static int cascfs_open(const char *path, struct fuse_file_info *fi)
 {
     LOG_VERBOSE << path;
 
@@ -302,7 +307,7 @@ static int cascf_open(const char *path, struct fuse_file_info *fi)
     return 0;
 }
 
-static int cascf_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+static int cascfs_read(const char *path, char *buf, size_t size, FUSE_OFF_T offset, struct fuse_file_info *fi)
 {
     LOG_VERBOSE << path << " at " << offset << " size " << size;
 
@@ -335,25 +340,12 @@ static int cascf_read(const char *path, char *buf, size_t size, off_t offset, st
     }
 }
 
-static struct fuse_operations cascf_oper = {
-    .getattr = cascf_getattr,
-    .open = cascf_open,
-    .read = cascf_read,
-    .readdir = cascf_readdir,
-};
-
-struct TFileTreeRootPub : public TFileTreeRoot
-{
-public:
-    CASC_FILE_TREE FileTree;
-};
-
-void cascf_populate(HANDLE hStorage)
+void cascfs_populate(HANDLE hStorage)
 {
     auto hs = IsValidCascStorageHandle(hStorage);
     cfFileTree.m_hStorage = hStorage;
 
-    PLOG_INFO << "Building file tree..";
+    LOG_DEBUG << "Building file tree..";
 
     CASC_FIND_DATA findData;
     HANDLE handle = CascFindFirstFile(hStorage, "*", &findData, NULL);
@@ -390,20 +382,31 @@ void cascf_populate(HANDLE hStorage)
     cfFileTree.GenerateNodeHashMap(cfFileTree.GetRootNode());
 }
 
-int cascf_mount(const std::string& mountPoint, HANDLE hStorage)
+static struct fuse_operations cascf_oper;
+
+int cascfs_mount(const std::string& mountPoint, HANDLE hStorage)
 {
-    cascf_populate(hStorage);
+    cascf_oper.getattr = cascfs_getattr;
+    cascf_oper.open = cascfs_open;
+    cascf_oper.read = cascfs_read;
+    cascf_oper.readdir = cascfs_readdir;
+
+    cascfs_populate(hStorage);
 
     LOG_DEBUG << "Preparing to mount..";
+
+#ifndef WIN32
     if (!pathExists(mountPoint)) {
         LOG_FATAL << "Path doesn't exist or is not accessible" << mountPoint;
         return -2;
     }
+#endif
 
     auto fChan = fuse_mount(mountPoint.c_str(), NULL);
     if (fChan != NULL) {
         auto fHandle = fuse_new(fChan, NULL, &cascf_oper, sizeof(cascf_oper), NULL);
         if (fHandle != NULL) {
+            LOG_INFO << "cascfs " << static_cast<void*>(fHandle) << " mounted at " << mountPoint;
             struct fuse_session *se = fuse_get_session(fHandle);
             if (fuse_set_signal_handlers(se) == 0) {
                 LOG_DEBUG << "Entering CASC-FS loop..";
@@ -415,6 +418,10 @@ int cascf_mount(const std::string& mountPoint, HANDLE hStorage)
 
             fuse_unmount(mountPoint.c_str(), fChan);
             fuse_destroy(fHandle);
+        }
+        else {
+            LOG_FATAL << "fuse_new failed " << static_cast<void*>(fHandle);
+            return -2;
         }
     }
     else {

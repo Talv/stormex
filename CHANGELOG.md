@@ -1,5 +1,12 @@
 # Change Log
 
+## [2.1.0] - 2019-07-31
+
+* Added basic support for mounting CASC as filesystem visible to the OS using [FUSE](https://github.com/libfuse/libfuse).
+  * Linux will work out of the box.
+  * MacOS is likely to work but hasn't been tested.
+  * Under Windows app is compiled against `dokanfuse` wrapper library. In order for it to work `Dokany` must be installed on the system.
+
 ## [2.0.0] - 2019-07-26
 
 * Refactored entire codebase..

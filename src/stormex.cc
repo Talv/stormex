@@ -301,7 +301,7 @@ int main(int argc, char* argv[])
     StorageExplorer stExplorer;
     int tmp;
 
-    PLOG_INFO << "Opening storage..";
+    LOG_DEBUG << "Opening storage..";
     if ((tmp = stExplorer.openStorage(appCtx.m_base.storageSrc)) != 0) {
         PLOG_FATAL << "Failed to open the storage: " << appCtx.m_base.storageSrc << " E(" << tmp << ")";
         exit(-1);
@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
 
     try {
         if (appCtx.m_mount.mountPoint.length()) {
-            return cascf_mount(appCtx.m_mount.mountPoint, stExplorer.getHandle());
+            return cascfs_mount(appCtx.m_mount.mountPoint, stExplorer.getHandle());
         }
 
         auto fResults = enumerateFiles(stExplorer);
