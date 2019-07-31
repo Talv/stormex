@@ -56,7 +56,9 @@ protected:
     HANDLE m_hStorage = nullptr;
 
 public:
-    const HANDLE& getHandle() { return m_hStorage; }
+    HANDLE getHandle() { return m_hStorage; }
+
+    ~StorageExplorer();
 
     /**
      * @brief Open CASC
