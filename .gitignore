@@ -1,6 +1,7 @@
 # build junk
 build/*
 !build/.gitkeep
+build*/*
 
 # development files
 .vscode/

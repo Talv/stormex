@@ -9,14 +9,11 @@ IF (FUSE_INCLUDE_DIR)
     SET (FUSE_FIND_QUIETLY TRUE)
 ENDIF (FUSE_INCLUDE_DIR)
 
-SET(DOKANY_DIR "C:\\Program Files\\Dokan\\Dokan Library-1.3.0")
-
 # find includes
 FIND_PATH (FUSE_INCLUDE_DIR fuse.h
     /usr/local/include/osxfuse
     /usr/local/include
     /usr/include
-    "${DOKANY_DIR}\\include"
 )
 
 # find lib
@@ -30,7 +27,7 @@ endif(APPLE)
 
 FIND_LIBRARY(FUSE_LIBRARIES
     NAMES ${FUSE_NAMES}
-    PATHS /lib64 /lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib "${DOKANY_DIR}\\lib"
+    PATHS /lib64 /lib /usr/lib64 /usr/lib /usr/local/lib64 /usr/local/lib
 )
 
 include (FindPackageHandleStandardArgs)
