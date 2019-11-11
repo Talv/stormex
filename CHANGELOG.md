@@ -1,5 +1,13 @@
 # Change Log
 
+## [2.2.0] - 2019-11-11
+
+* Upgraded to latest CascLib
+* Added support for WarCraft III Reforged
+* Windows:
+  * Dokany is now linked statically, this allows stormex to run correctly without it installed. Previously it would attempt to load dokany's `.dll` even if `--mount` option wasn't used. This is now fixed and dokany is now optional dependency as it was intended.
+  * Officiall binaries will now be built on Linux, using mingw as cross compiler. (Building on Windows using MVSC compiler is still supported).
+
 ## [2.1.0] - 2019-07-31
 
 * Added basic support for mounting CASC as filesystem visible to the OS using [FUSE](https://github.com/libfuse/libfuse).
