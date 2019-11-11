@@ -1,5 +1,3 @@
-cmake_minimum_required(VERSION 2.8.5)
-project(dokanfuse1)
 include(GNUInstallDirs)
 
 option(FUSE_PKG_CONFIG "Install a libfuse-compatible pkg-config file (fuse.pc)" ON)

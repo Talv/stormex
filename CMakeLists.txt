@@ -1,9 +1,9 @@
-project(STORMEX)
+project(stormex)
 cmake_minimum_required(VERSION 2.6)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${STORMEX_BINARY_DIR}/bin")
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${STORMEX_BINARY_DIR}/lib")
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${STORMEX_BINARY_DIR}/bin")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${stormex_BINARY_DIR}/bin")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${stormex_BINARY_DIR}/lib")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${stormex_BINARY_DIR}/bin")
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
 
 set(default_build_type "Release")
@@ -24,22 +24,23 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
 endif()
-# link statically with mingw
+
 if (MINGW)
+    # link statically
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static-libgcc -static-libstdc++ -static")
+    # workaround multiple DllMain definitions from libraries
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--allow-multiple-definition")
 endif()
 
 # modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/CMakeModules")
 
-if (NOT EXISTS "${STORMEX_SOURCE_DIR}/CascLib/CMakeLists.txt")
-    message(FATAL_ERROR "Missing dependency: CascLib")
-endif()
-
+# CascLib
 set(CASC_BUILD_STATIC_LIB ON CACHE BOOL "Force Static library building to link test app")
 set(CASC_BUILD_SHARED_LIB OFF CACHE BOOL "Compile dynamically linked library")
-
 add_subdirectory(CascLib)
+
+# plog
 add_subdirectory(plog)
 
 # stormex
@@ -49,7 +50,7 @@ set(SRC_FILES
     src/cascfuse.cc
     src/stormex.cc
 )
-add_executable(stormex ${SRC_FILES})
+add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 # FUSE
 if (ENABLE_FUSE)
@@ -66,20 +67,20 @@ if (ENABLE_FUSE)
     endif()
 
     include_directories(${FUSE_INCLUDE_DIR})
-    target_link_libraries(stormex ${FUSE_NAMES})
+    target_link_libraries(${PROJECT_NAME} ${FUSE_NAMES})
 endif()
 
-include_directories("${STORMEX_SOURCE_DIR}/include/"
-                    "${STORMEX_SOURCE_DIR}/CascLib/src/"
-                    "${STORMEX_SOURCE_DIR}/cxxopts/include/"
-                    "${STORMEX_SOURCE_DIR}/plog/include/"
+include_directories("${stormex_SOURCE_DIR}/include/"
+                    "${stormex_SOURCE_DIR}/CascLib/src/"
+                    "${stormex_SOURCE_DIR}/cxxopts/include/"
+                    "${stormex_SOURCE_DIR}/plog/include/"
 )
 
-target_link_libraries(stormex casc_static)
+target_link_libraries(${PROJECT_NAME} casc_static)
 
 # Set the RPATH
 if (APPLE)
-    set_target_properties(stormex PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/.")
+    set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-Wl,-rpath,@loader_path/.")
 elseif (UNIX)
-    set_target_properties(stormex PROPERTIES INSTALL_RPATH ".")
+    set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH ".")
 endif()
