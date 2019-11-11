@@ -36,10 +36,8 @@ if (NOT EXISTS "${STORMEX_SOURCE_DIR}/CascLib/CMakeLists.txt")
     message(FATAL_ERROR "Missing dependency: CascLib")
 endif()
 
-if(WIN32)
-    set(CASC_BUILD_STATIC_LIB ON CACHE BOOL "Force Static library building to link test app")
-    set(CASC_BUILD_SHARED_LIB OFF CACHE BOOL "Compile dynamically linked library")
-endif()
+set(CASC_BUILD_STATIC_LIB ON CACHE BOOL "Force Static library building to link test app")
+set(CASC_BUILD_SHARED_LIB OFF CACHE BOOL "Compile dynamically linked library")
 
 add_subdirectory(CascLib)
 add_subdirectory(plog)
@@ -77,11 +75,7 @@ include_directories("${STORMEX_SOURCE_DIR}/include/"
                     "${STORMEX_SOURCE_DIR}/plog/include/"
 )
 
-if(WIN32)
-    target_link_libraries(stormex casc_static)
-else()
-    target_link_libraries(stormex casc)
-endif()
+target_link_libraries(stormex casc_static)
 
 # Set the RPATH
 if (APPLE)
