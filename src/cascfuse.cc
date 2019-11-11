@@ -178,10 +178,10 @@ public:
     FsNode* GetParentNodeOfFilename(const std::string& filename)
     {
         size_t pos_start = 0;
-        size_t pos_end = -1;
+        size_t pos_end = std::string::npos;
         auto currentNode = GetRootNode();
 
-        while ((pos_end = filename.find('\\', pos_start)) != std::string::npos) {
+        while ((pos_end = filename.find_first_of(":\\", pos_start)) != std::string::npos) {
             std::string dirname = filename.substr(pos_start, pos_end - pos_start);
             pos_start = pos_end + 1;
             auto folderNodeEntry = currentNode->Children().find(dirname);
@@ -342,7 +342,7 @@ static int cascfs_read(const char *path, char *buf, size_t size, FUSE_OFF_T offs
 
 void cascfs_populate(HANDLE hStorage)
 {
-    auto hs = IsValidCascStorageHandle(hStorage);
+    auto hs = TCascStorage::IsValid(hStorage);
     cfFileTree.m_hStorage = hStorage;
 
     LOG_DEBUG << "Building file tree..";
@@ -360,10 +360,10 @@ void cascfs_populate(HANDLE hStorage)
 
         FsNode *folderNode;
 
-        if (findData.bCanOpenByName) {
+        if (findData.NameType == _CASC_NAME_TYPE::CascNameFull) {
             folderNode = cfFileTree.GetParentNodeOfFilename(findData.szFileName);
         }
-        else if (findData.bCanOpenByCKey) {
+        else if (findData.NameType == _CASC_NAME_TYPE::CascNameCKey) {
             std::string targetFilepath = "CKEY\\";
             targetFilepath += findData.szFileName;
             folderNode = cfFileTree.GetParentNodeOfFilename(targetFilepath);

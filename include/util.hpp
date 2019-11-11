@@ -25,5 +25,6 @@ bool stringFindIC(const std::string& strHaystack, const std::string& strNeedle);
 bool stringEqualIC(const std::string& str1, const std::string& str2);
 void stringToLower(std::string& str);
 std::string stringToLowerCopy(std::string str);
+void formatBytes(std::ostream& out, const unsigned char *data, size_t dataLen, bool format = true);
 
 #endif // __UTIL_HPP__

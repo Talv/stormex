@@ -42,7 +42,9 @@ bool StorageExplorer::enumerateFiles(std::vector<STORAGE_SEARCH_RESULT*>& search
         record->filename = findData.szFileName;
         memcpy(record->CKey, findData.CKey, sizeof(record->CKey));
         memcpy(record->EKey, findData.EKey, sizeof(record->EKey));
-        record->dwFileSize = findData.dwFileSize;
+        record->fileSize = findData.FileSize;
+        record->fileAvailable = findData.FileSize;
+        record->nameType = findData.NameType;
         searchResults.push_back(record);
     } while (CascFindNextFile(handle, &findData));
 

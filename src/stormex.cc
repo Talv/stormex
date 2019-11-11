@@ -219,6 +219,10 @@ void extractFilenames(StorageExplorer& stExplorer, const std::vector<std::string
                 // normalize slashes in the paths received from CASC and force '/'
                 std::replace(targetFile.begin(), targetFile.end(), '\\', '/');
 
+                // replace colon with backslash for compatibility purposes
+                // internally in CASC, colon is used on directories that act as mount points
+                std::replace(targetFile.begin(), targetFile.end(), ':', '/');
+
                 fileSize = stExplorer.extractFileToPath(storedFilename, targetFile);
                 PLOG_DEBUG << "Written " << formatFileSize(fileSize) << " to " << targetFile;
             }
@@ -320,10 +324,10 @@ int main(int argc, char* argv[])
                 char keyBuff[MD5_STRING_SIZE + 1];
                 std::string tmps;
                 if (appCtx.m_list.showDetails) {
-                    tmps = formatFileSize(entry->dwFileSize);
-                    std::cout << tmps << std::setw(8 - tmps.length()) << " ";
-                    std::cout << StringFromMD5((LPBYTE)entry->CKey, keyBuff) << " ";
-                    std::cout << StringFromMD5((LPBYTE)entry->EKey, keyBuff) << " ";
+                    tmps = formatFileSize(entry->fileSize);
+                    std::cout << std::setfill(' ') << std::setw(8) << tmps << "  ";
+                    formatBytes(std::cout, entry->CKey, sizeof(entry->CKey), false);
+                    std::cout << "  ";
                 }
                 std::cout << entry->filename;
                 std::cout << std::endl;
@@ -338,7 +342,8 @@ int main(int argc, char* argv[])
         }
         else if (appCtx.m_extract.xFilenames.size()) {
             for (auto& item : appCtx.m_extract.xFilenames) {
-                // force backslashes regardless of the platform - that's the expected output from CASC anyway, and it'll get normalized later
+                // force backslashes regardless of the platform
+                // that's the expected output from CASC anyway, and it'll get normalized later
                 std::replace(item.begin(), item.end(), '/', '\\');
             }
             extractFilenames(stExplorer, appCtx.m_extract.xFilenames);

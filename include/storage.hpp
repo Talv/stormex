@@ -24,28 +24,15 @@ struct STORAGE_SEARCH_RESULT
     // Encoded key. This is always present.
     BYTE EKey[MD5_HASH_SIZE];
 
-    // Tag mask. Only valid if the storage supports tags, otherwise 0
-    ULONGLONG TagBitMask;
-
-    // File data ID. Only valid if the storage supports file data IDs, otherwise CASC_INVALID_ID
-    DWORD dwFileDataId;
-
     // Size of the file, as retrieved from CKey entry or EKey entry
-    DWORD dwFileSize;
+    DWORD fileSize;
 
-    // Locale flags. Only valid if the storage supports locale flags, otherwise CASC_INVALID_ID
-    DWORD dwLocaleFlags;
+    // If true the file is available locally
+    DWORD fileAvailable:1;
 
-    // Content flags. Only valid if the storage supports content flags, otherwise CASC_INVALID_ID
-    DWORD dwContentFlags;
-
-    // Hints as for which open method is suitable
-    DWORD bFileAvailable:1;                     // If true the file is available locally
-    DWORD bCanOpenByName:1;
-    DWORD bCanOpenByDataId:1;
-    DWORD bCanOpenByCKey:1;
-    DWORD bCanOpenByEKey:1;
-    CASC_NAME_TYPE NameType;
+    // Name type in 'szFileName'. In case the file name is not known,
+    // CascLib can put FileDataId-like name or a string representation of CKey/EKey
+    CASC_NAME_TYPE nameType;
 };
 
 /**

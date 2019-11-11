@@ -8,6 +8,7 @@
 #include <regex>
 #include <cctype>
 #include "util.hpp"
+#include "common.hpp"
 
 struct stat info;
 
@@ -29,7 +30,7 @@ int ensureDirExists(std::string strDestName)
     // ensure directory path to the file exists
     size_t pos = -1;
     while ((pos = strDestName.find('/', pos + 1)) != std::string::npos) {
-        std::string dirname = strDestName.substr(0, pos);
+        std::string dirname = strDestName.substr(0, pos + 1);
 
         DIR* d = opendir(dirname.c_str());
         if (!d) {
@@ -111,4 +112,17 @@ std::string stringToLowerCopy(std::string str)
 {
     std::transform(str.begin(), str.end(), str.begin(), ::tolower);
     return str;
+}
+
+void formatBytes(std::ostream& out, const unsigned char *data, size_t dataLen, bool format) {
+    out << std::setfill('0');
+    for(size_t i = 0; i < dataLen; ++i) {
+        out << std::hex << std::setw(2) << (int)data[i];
+        if (format) {
+            out << (((i + 1) % 16 == 0) ? "\n" : " ");
+        }
+    }
+    if (format) {
+        out << std::endl;
+    }
 }

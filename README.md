@@ -6,6 +6,7 @@ Tested on:
 
 * StarCraft II
 * Heroes of The Storm
+* Warcraft III Classic & Reforged
 
 ## Installation
 
